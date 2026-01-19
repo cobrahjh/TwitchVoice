@@ -11,8 +11,13 @@ import {
   Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
+
+// Only import WebView for native platforms
+let WebView: any = null;
+if (Platform.OS !== 'web') {
+  WebView = require('react-native-webview').WebView;
+}
 import { useAuth } from '../../contexts/AuthContext';
 import { TwitchIRC } from '../../services/twitchIRC';
 import { ChatMessage } from '../../types/twitch';
@@ -169,14 +174,27 @@ export default function StreamScreen() {
 
       {/* Video Player */}
       <View style={[styles.playerContainer, !showChat && styles.playerFullHeight]}>
-        <WebView
-          source={{ html: getTwitchEmbedHtml() }}
-          style={styles.webview}
-          allowsInlineMediaPlayback
-          mediaPlaybackRequiresUserAction={false}
-          javaScriptEnabled
-          domStorageEnabled
-        />
+        {Platform.OS === 'web' ? (
+          <iframe
+            src={`https://player.twitch.tv/?channel=${channel}&parent=${window.location.hostname}&muted=false&autoplay=true`}
+            style={{ width: '100%', height: '100%', border: 'none' }}
+            allowFullScreen
+            allow="autoplay; fullscreen"
+          />
+        ) : WebView ? (
+          <WebView
+            source={{ html: getTwitchEmbedHtml() }}
+            style={styles.webview}
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            javaScriptEnabled
+            domStorageEnabled
+          />
+        ) : (
+          <View style={styles.webview}>
+            <Text style={{ color: '#fff' }}>Video not available</Text>
+          </View>
+        )}
       </View>
 
       {/* Chat */}

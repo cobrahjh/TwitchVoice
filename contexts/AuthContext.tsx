@@ -1,8 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TwitchUser, AuthState } from '../types/twitch';
 import { validateToken, getUser } from '../services/twitchApi';
+
+// Only import AsyncStorage for native platforms
+let AsyncStorage: any = null;
+if (Platform.OS !== 'web') {
+  AsyncStorage = require('@react-native-async-storage/async-storage').default;
+}
 
 interface AuthContextType extends AuthState {
   login: (token: string) => Promise<void>;
@@ -19,21 +24,21 @@ const storage = {
     if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
       return localStorage.getItem(key);
     }
-    return AsyncStorage.getItem(key);
+    return AsyncStorage?.getItem(key) ?? null;
   },
   async setItem(key: string, value: string): Promise<void> {
     if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
       localStorage.setItem(key, value);
       return;
     }
-    return AsyncStorage.setItem(key, value);
+    await AsyncStorage?.setItem(key, value);
   },
   async removeItem(key: string): Promise<void> {
     if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
       localStorage.removeItem(key);
       return;
     }
-    return AsyncStorage.removeItem(key);
+    await AsyncStorage?.removeItem(key);
   },
 };
 
