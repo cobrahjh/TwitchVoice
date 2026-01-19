@@ -41,3 +41,10 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Temporary files
+screenshot.json
+screenshot.png
+expo-output.log
+nul
+.claude/
