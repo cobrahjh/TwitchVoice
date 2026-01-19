@@ -45,19 +45,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
+    // Immediate fallback - never stay loading more than 1 second
+    const fallback = setTimeout(() => {
+      setState(prev => {
+        if (prev.isLoading) {
+          console.log('Fallback timeout triggered');
+          return { ...prev, isLoading: false };
+        }
+        return prev;
+      });
+    }, 1000);
+
     loadStoredAuth();
+
+    return () => clearTimeout(fallback);
   }, []);
 
   const loadStoredAuth = async () => {
     // Set a timeout to ensure we don't get stuck loading
     const timeout = setTimeout(() => {
+      console.log('Auth timeout triggered');
       setState(prev => ({ ...prev, isLoading: false }));
-    }, 5000);
+    }, 2000);
 
     try {
       const storedToken = await storage.getItem(TOKEN_KEY);
+      console.log('Stored token:', storedToken ? 'found' : 'none');
       if (storedToken) {
         const isValid = await validateToken(storedToken);
+        console.log('Token valid:', isValid);
         if (isValid) {
           const user = await getUser(storedToken);
           clearTimeout(timeout);
@@ -69,11 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
       }
+      clearTimeout(timeout);
+      setState(prev => ({ ...prev, isLoading: false }));
     } catch (error) {
       console.error('Failed to load stored auth:', error);
+      clearTimeout(timeout);
+      setState(prev => ({ ...prev, isLoading: false }));
     }
-    clearTimeout(timeout);
-    setState(prev => ({ ...prev, isLoading: false }));
   };
 
   const login = async (token: string) => {
