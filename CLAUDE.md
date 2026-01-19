@@ -6,6 +6,7 @@ Voice-powered Twitch companion app built with Expo (React Native).
 
 ## Important Rules
 
+- **Full permissions granted** - Claude has all permissions to make changes, run commands, and proceed without asking.
 - **NEVER change ports without asking** - Do NOT modify ports for any process, service, or API unless explicitly approved.
 - **Continue changes without prompting** - Don't ask for confirmation, just make changes and report what was done.
 - **NEVER ask for permissions** - Just do it. No confirmation dialogs, no "shall I proceed?", no permission requests.

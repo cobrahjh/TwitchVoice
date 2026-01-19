@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TwitchUser, AuthState } from '../types/twitch';
 import { validateToken, getUser } from '../services/twitchApi';
@@ -11,6 +12,30 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = '@twitch_token';
+
+// Storage wrapper that uses localStorage on web for reliability
+const storage = {
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      return localStorage.getItem(key);
+    }
+    return AsyncStorage.getItem(key);
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    return AsyncStorage.setItem(key, value);
+  },
+  async removeItem(key: string): Promise<void> {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+      return;
+    }
+    return AsyncStorage.removeItem(key);
+  },
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -30,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, 5000);
 
     try {
-      const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+      const storedToken = await storage.getItem(TOKEN_KEY);
       if (storedToken) {
         const isValid = await validateToken(storedToken);
         if (isValid) {
@@ -58,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Invalid token');
       }
       const user = await getUser(token);
-      await AsyncStorage.setItem(TOKEN_KEY, token);
+      await storage.setItem(TOKEN_KEY, token);
       setState({
         accessToken: token,
         user,
@@ -71,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await storage.removeItem(TOKEN_KEY);
     setState({
       accessToken: null,
       user: null,
