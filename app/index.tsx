@@ -8,10 +8,14 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../contexts/AuthContext';
-import { getOAuthUrl } from '../services/twitchApi';
+import { getOAuthUrl, getClientId } from '../services/twitchApi';
+
+// Required for proper auth session handling on mobile
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -26,78 +30,54 @@ export default function LoginScreen() {
     }
   }, [accessToken, isLoading]);
 
+  // Check for OAuth callback token in URL hash or localStorage
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // Check URL hash first (direct redirect from Twitch)
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const token = params.get('access_token');
+        if (token) {
+          // Clear the hash from URL
+          window.history.replaceState(null, '', window.location.pathname);
+          setLoggingIn(true);
+          login(token);
+          return;
+        }
+      }
+
+      // Check localStorage fallback
+      const pendingToken = localStorage.getItem('twitch_pending_token');
+      if (pendingToken) {
+        localStorage.removeItem('twitch_pending_token');
+        setLoggingIn(true);
+        login(pendingToken);
+      }
+    }
+  }, []);
+
   const handleLogin = async () => {
     try {
-      const authUrl = getOAuthUrl();
-
       if (Platform.OS === 'web') {
-        // Open popup for OAuth
-        const width = 600;
-        const height = 700;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-
-        const popup = window.open(
-          authUrl,
-          'TwitchAuth',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-
-        // Poll for token in popup URL
-        const pollTimer = setInterval(() => {
-          try {
-            if (!popup || popup.closed) {
-              clearInterval(pollTimer);
-              setShowTokenInput(true);
-              return;
-            }
-
-            const popupUrl = popup.location.href;
-            if (popupUrl.includes('access_token=')) {
-              clearInterval(pollTimer);
-              const hash = popupUrl.split('#')[1];
-              const params = new URLSearchParams(hash);
-              const token = params.get('access_token');
-              popup.close();
-
-              if (token) {
-                setLoggingIn(true);
-                login(token);
-              }
-            }
-          } catch (e) {
-            // Cross-origin error - popup is on different domain, keep polling
-          }
-        }, 500);
-
-        // Show manual input after 60 seconds
-        setTimeout(() => {
-          clearInterval(pollTimer);
-          if (!loggingIn) {
-            setShowTokenInput(true);
-          }
-        }, 60000);
-
+        const authUrl = getOAuthUrl('web');
+        // Open Twitch OAuth in new tab
+        window.open(authUrl, '_blank');
+        setShowTokenInput(true);
       } else {
-        // On native, use WebBrowser
-        const result = await WebBrowser.openAuthSessionAsync(
-          authUrl,
-          'http://localhost'
-        );
+        // On native, open Twitch auth and show manual token input
+        // Twitch doesn't support custom URL schemes, so we use manual token flow
+        const redirectUri = 'http://localhost';
 
-        if (result.type === 'success' && result.url) {
-          const url = result.url;
-          const hashIndex = url.indexOf('#');
-          if (hashIndex !== -1) {
-            const fragment = url.substring(hashIndex + 1);
-            const params = new URLSearchParams(fragment);
-            const token = params.get('access_token');
+        const authUrl = `https://id.twitch.tv/oauth2/authorize?` +
+          `client_id=${getClientId()}&` +
+          `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+          `response_type=token&` +
+          `scope=${encodeURIComponent('user:read:follows chat:read chat:edit')}`;
 
-            if (token) {
-              await login(token);
-            }
-          }
-        }
+        // Open auth in browser - user will need to copy token after redirect
+        await WebBrowser.openBrowserAsync(authUrl);
+        setShowTokenInput(true);
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -114,17 +94,17 @@ export default function LoginScreen() {
 
   if (isLoading || loggingIn) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <ActivityIndicator size="large" color="#9147ff" />
         <Text style={{ color: '#adadb8', marginTop: 16 }}>
           {loggingIn ? 'Logging in...' : 'Loading...'}
         </Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.logoContainer}>
         <Text style={styles.logo}>TwitchVoice</Text>
         <Text style={styles.subtitle}>Voice-powered Twitch companion</Text>
@@ -143,8 +123,9 @@ export default function LoginScreen() {
       ) : (
         <View style={styles.tokenInputContainer}>
           <Text style={styles.tokenInstructions}>
-            After authorizing, copy the token from the URL{'\n'}
-            (the part after "access_token=")
+            1. Authorize in Twitch browser{'\n'}
+            2. After "This site can't be reached" page{'\n'}
+            3. Copy token from URL (after "access_token=")
           </Text>
           <TextInput
             style={styles.tokenInput}
@@ -163,7 +144,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

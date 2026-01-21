@@ -171,14 +171,20 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return chunks;
 }
 
-export function getOAuthUrl(): string {
-  // Twitch only allows http://localhost (no port) for local dev
+export function getOAuthUrl(platform: 'web' | 'native'): string {
+  // Web uses localhost, native uses 127.0.0.1 (both registered in Twitch)
+  const redirectUri = platform === 'web' ? 'http://localhost' : 'http://127.0.0.1';
+
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
-    redirect_uri: 'http://localhost',
+    redirect_uri: redirectUri,
     response_type: 'token',
     scope: 'user:read:follows chat:read chat:edit',
   });
 
   return `${AUTH_BASE}/authorize?${params.toString()}`;
+}
+
+export function getClientId(): string {
+  return CLIENT_ID;
 }

@@ -13,6 +13,7 @@ export class TwitchIRC {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private messageId = 0;
+  private hasJoined = false;
 
   constructor(token: string, username: string) {
     this.token = token;
@@ -66,8 +67,9 @@ export class TwitchIRC {
       }
 
       // Handle successful auth
-      if (line.includes('001')) {
+      if (line.includes('001') && !this.hasJoined) {
         console.log('IRC authenticated, joining channel:', this.channel);
+        this.hasJoined = true;
         this.joinChannel();
         continue;
       }
@@ -182,6 +184,7 @@ export class TwitchIRC {
     this.channel = null;
     this.onMessage = null;
     this.onConnectionChange = null;
+    this.hasJoined = false;
   }
 
   changeChannel(newChannel: string) {

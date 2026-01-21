@@ -27,6 +27,10 @@ Voice-powered Twitch companion app built with Expo (React Native).
 - `opn` - open UI - open browser to test
 - `rvw` - review - review code for issues, clean up, optimize
 
+## Screenshot Workflow
+
+- After reading/analyzing images from `G:\My Drive\AI Development\Screenshots`, move them to `G:\My Drive\AI Development\Screenshots\backup`
+
 ## Tech Stack
 
 - Expo SDK 54+ with expo-router
@@ -56,8 +60,13 @@ TwitchVoice/
 ## Twitch App Credentials
 
 - **Client ID:** ts9t5mvq8lfrghozvbu7f7ypu67eho
-- **Redirect URI:** http://localhost
 - **Client Type:** Public
+- **Redirect URIs (register ALL in Twitch Developer Console):**
+  - `http://localhost` (web)
+  - `http://127.0.0.1` (web fallback)
+  - `twitchvoice://auth/callback` (mobile production)
+  - `exp://localhost:8081/--/auth/callback` (Expo Go iOS)
+  - `exp://127.0.0.1:8081/--/auth/callback` (Expo Go Android)
 
 ## Core Features
 
@@ -105,7 +114,21 @@ This project is part of the LLM-DevOSWE hive ecosystem.
 ## Known Issues
 
 - npm commands need to run via PowerShell on Windows for proper output capture
-- Browser extension (Kitt Bridge) required for browser automation
+- Browser automation uses **Kitt Browser Bridge** (NOT Claude extension)
+  - Extension connects to WebSocket relay at ws://localhost:8620
+  - mcp__claude-in-chrome tools do NOT work with Kitt - use relay commands instead
+  - Always use full URLs (e.g., http://localhost:8081 not just localhost:8081)
+
+## TODO
+
+- ~~**Fix pointerEvents deprecation**~~ - Fixed: suppressed via LogBox (warning from expo-router internals, not app code)
+- **Kitt Bridge Relay (8620)** - Add features needed for Claude integration:
+  - Response routing back to requesting client
+  - Command acknowledgment/confirmation
+  - Screenshot capture and return as base64
+  - Tab listing API
+  - Navigate/click/type commands with response
+- ~~**Auto-start stream**~~ - Set muted=true for autoplay, but Twitch player still requires one click due to browser policy
 
 ## Version History
 
