@@ -26,6 +26,7 @@ Voice-powered Twitch companion app built with Expo (React Native).
 - `chk` - check/verify - check status, syntax, or state
 - `opn` - open UI - open browser to test
 - `rvw` - review - review code for issues, clean up, optimize
+- `ss` - save session - commit and push current changes
 
 ## Screenshot Workflow
 
